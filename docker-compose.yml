@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.1-pg18-trixie
+    container_name: demo-rag-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: demo-rag123
+      POSTGRES_DB: demo-rag
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      # IMPORTANT: PG18 requires parent directory
+      - pgdata:/var/lib/postgresql
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d demo-rag"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
