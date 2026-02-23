@@ -5,6 +5,9 @@ from app.dto.users import (
     UserRegistrationResponseDTO,
     UserLoginResponseDTO,
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class JWTAuthHandler:

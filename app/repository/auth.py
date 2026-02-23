@@ -4,10 +4,11 @@ from datetime import datetime
 from psycopg import errors
 from app.domain import exceptions
 from app.models.user import UserModel
+import logging
 
+logger = logging.getLogger(__name__)
 
 class JWTAuthRepository:
-    # FIXME: I need the logger in the init function for logging
     def __init__(self, conn):
         self.conn = conn
         self.user_columns = ["id", "username", "email", "phone_no", "password_hash", "created_at","updated_at", "deleted_at"]
@@ -35,11 +36,16 @@ class JWTAuthRepository:
                 )
                 cursor.execute(query, values)
                 self.conn.commit()
+
+                logger.info(f"Repo: User Created with ID: {trans_id}")
+                return trans_id
                 return trans_id
         except errors.UniqueViolation:
+            logger.error(f"Repo: User Already Exists with ID: {trans_id}")
             self.conn.rollback()
             raise exceptions.UserAlreadyExists()
         except Exception as e:
+            logger.error(f"Repo: General Signup Exception: {str(e)}")
             self.conn.rollback()
             raise e
 
@@ -51,6 +57,7 @@ class JWTAuthRepository:
                 matched_user = cursor.fetchone()
 
                 if not matched_user:
+                    logger.info('Repo: No such email')
                     return None
 
                 return UserModel(
@@ -64,5 +71,5 @@ class JWTAuthRepository:
                     deleted_at=matched_user[7]
                 )
         except Exception as e:
-            # TODO: Log using the logger from the class
+            logger.error(f'Repo: Login Exception: {str(e)}')
             return None
