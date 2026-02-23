@@ -1,13 +1,19 @@
-from app.dto.users import UserRegistrationRequestDTO, UserLoginRequestDTO
+from app.service.auth import JWTAuthService
+from app.dto.users import (
+    UserRegistrationRequestDTO,
+    UserLoginRequestDTO,
+    UserRegistrationResponseDTO,
+    UserLoginResponseDTO,
+)
+
 
 class JWTAuthHandler:
 
-    def __init__(self, user_service, token_service):
-        self.user_service = user_service
-        self.token_service = token_service
+    def __init__(self, auth_service: JWTAuthService):
+        self.auth_service = auth_service
 
-    def signup(self, data: UserRegistrationRequestDTO):
-        raise NotImplementedError()
+    def signup(self, data: UserRegistrationRequestDTO) -> UserRegistrationResponseDTO | None:
+        return self.auth_service.signup(data)
 
     def login(self, data: UserLoginRequestDTO):
-        raise NotImplementedError()
+        return self.auth_service.login(data)

@@ -26,11 +26,19 @@ class StorageConfig:
     azure_blob_storage: str = os.getenv("AZURE_BLOB_STORAGE", "")
 
 
+# TODO: Use this config for token creation and validation
+@dataclass
+class JWTConfig:
+    expiration_minutes: int = int(os.getenv("JWT_EXPIRATION_MINUTES", 60))
+    secret_key: str = os.getenv("JWT_SECRET_KEY", "")
+
+
 @dataclass
 class AppConfig:
     local_db: LocalDBConfig = field(default_factory=LocalDBConfig)
     azure_db: AzureDBConfig = field(default_factory=AzureDBConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
+    jwt_config: JWTConfig = field(default_factory=JWTConfig)
 
 
 # FIXME: Make the ensure directories function here to ensure all the required directories on application startup
