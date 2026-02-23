@@ -1,8 +1,6 @@
 from app.repository.database import PostgresPool
-from app.core.pdf_extractor import text_extractor
 from app.config import config
 from app.utils import database
-import logging
 from app.core.dependencies import logging
 
 

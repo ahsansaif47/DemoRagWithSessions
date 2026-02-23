@@ -2,10 +2,7 @@ import re
 from logging import Logger
 import fitz
 
-import logging
-
-
-from app.core.pdf_extractor.content import ExtractedContent, PageContent
+from app.pdf_extractor.content import ExtractedContent, PageContent
 
 
 class TextExtractor:

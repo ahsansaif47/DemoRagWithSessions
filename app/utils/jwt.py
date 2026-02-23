@@ -16,7 +16,7 @@ class JWTHandler:
 
     def create_jwt(self, claim: Claim):
         data = asdict(claim)
-        expiry_time = datetime.utcnow() + timedelta(minutes=self.expiration)
+        expiry_time = datetime.utcnow() + timedelta(seconds=self.expiration)
         data.update({"exp": expiry_time})
         return jwt.encode(data, self.secret_key, algorithm=self.algorithm)
 
