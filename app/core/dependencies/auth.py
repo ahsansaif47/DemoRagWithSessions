@@ -1,8 +1,14 @@
-from fastapi import Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException
 from app.repository.auth import JWTAuthRepository
 from app.service.auth import JWTAuthService
 from app.api.handlers.auth import JWTAuthHandler
 from app.core.dependencies.database import get_database
+from app.utils.jwt import Claim
+from app.utils.jwt import JWTHandler
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_auth_repository(db=Depends(get_database)):
     return JWTAuthRepository(db)
@@ -12,3 +18,18 @@ def get_auth_service(repo=Depends(get_auth_repository)):
 
 def get_auth_handlers(service=Depends(get_auth_service)):
     return JWTAuthHandler(service)
+
+
+# TODO: Use this in the api handler to get jwt claims
+security = HTTPBearer()
+def get_jwt_claim(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> Claim | None:
+    try:
+        # TODO: Get the secret key from the config
+        jwt_handler = JWTHandler("")
+        token = credentials.credentials
+        return jwt_handler.decode_token(token)
+    except Exception as e:
+        logger.error(f'JWT Claim Decode Error: {str(e)}')
+        raise HTTPException(status_code=401, detail="Invalid Token")

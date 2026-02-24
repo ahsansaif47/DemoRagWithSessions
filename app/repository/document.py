@@ -50,24 +50,24 @@ class DocumentRepository:
     def remove_document(self, doc_id: str) -> bool:
         try:
             with self.conn.cursor() as cursor:
-                # Soft Delete File Record Itself
-                query = "UPDATE files SET deleted_at = '%s' WHERE file_id = '%s'"
-                values = (datetime.now().utcnow(), doc_id)
-                cursor.execute(query, values)
-
                 # Mark Document Text Soft Deleted
                 soft_delete_file_text_q = "UPDATE document_texts SET deleted_at = '%s' WHERE file_id = '%s'"
+                values = (datetime.now().utcnow(), doc_id)
                 cursor.execute(soft_delete_file_text_q, values)
 
                 # Mark Document Images Soft Deleted
                 soft_delete_file_images_q = "UPDATE document_images SET deleted_at = '%s' WHERE file_id = '%s'"
                 cursor.execute(soft_delete_file_images_q, values)
 
+                # Soft Delete File Record Itself
+                query = "UPDATE files SET deleted_at = '%s' WHERE file_id = '%s'"
+                cursor.execute(query, values)
+
                 self.conn.commit()
 
-                logger.info(f"Repo: Document {doc_id} Removed")
-                logger.info(f"Repo: Document {doc_id} Text Removed")
                 logger.info(f"Repo: Document {doc_id} Images Removed")
+                logger.info(f"Repo: Document {doc_id} Text Removed")
+                logger.info(f"Repo: Document {doc_id} Removed")
 
                 return True
         except Exception as e:

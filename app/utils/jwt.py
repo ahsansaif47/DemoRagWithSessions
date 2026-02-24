@@ -2,6 +2,9 @@
 from datetime import datetime, timedelta
 from jose import jwt
 from dataclasses import dataclass, asdict
+import logging
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class Claim:
@@ -22,3 +25,15 @@ class JWTHandler:
 
     def verify_jwt(self, token: str):
         raise NotImplementedError()
+
+    def decode_token(self, token:str) -> Claim | None:
+        try:
+            payload = jwt.decode(token, self.secret_key, algorithms=self.algorithm)
+            claim = Claim(
+                payload["user_id"],
+                payload["email"],
+            )
+            return claim
+        except Exception as e:
+            logger.error(f'JWT Decoding Error: {str(e)}')
+            return None
