@@ -21,7 +21,7 @@ class JWTAuthService:
             if user_id is not None:
                 user_data = UserCreatedData()
                 # TODO: Might need to convert user_id to string..
-                # Currently its uuid.UUID
+                # NOTE: Currently its uuid.UUID
                 user_data.id = user_id
                 user_data.email = data.email
                 user_data.is_verified = False

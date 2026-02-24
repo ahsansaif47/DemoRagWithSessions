@@ -39,7 +39,6 @@ class JWTAuthRepository:
 
                 logger.info(f"Repo: User Created with ID: {trans_id}")
                 return trans_id
-                return trans_id
         except errors.UniqueViolation:
             logger.error(f"Repo: User Already Exists with ID: {trans_id}")
             self.conn.rollback()
