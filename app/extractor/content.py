@@ -4,9 +4,8 @@ from typing import List
 
 @dataclass
 class ExtractedImage:
-    image_number: int = 0
+    image_number: int = 1
     image_data: bytes = b''
-    image_path: str = ""
 
 @dataclass
 class PageContent:
@@ -18,7 +17,6 @@ class PageContent:
 @dataclass
 class ExtractedContent:
     raw_text: str = ""
-    # page_text: list = field(default_factory=list)
-    # images: List[ExtractedImage] = field(default_factory=list)
     page_content: List[PageContent] = field(default_factory=list)
     total_pages: int = 0
+    total_images: int = 0

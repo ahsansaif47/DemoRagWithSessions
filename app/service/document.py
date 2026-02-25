@@ -1,7 +1,5 @@
 import logging
 import os
-from os.path import exists
-
 from app.repository.document import DocumentRepository
 from app.pdf_extractor.text_extractor import TextExtractor
 from app.pdf_extractor.image_extractor import extract_visual_elements

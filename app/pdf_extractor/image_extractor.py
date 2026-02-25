@@ -41,7 +41,7 @@ class VisualDetector:
 
         return detections
 
-
+# Note: This thing can be done in text extractor function
 def render_single_page(doc, page_index, total_pages, dpi=300):
     """Render a single page and return the image. Memory efficient."""
     print(f"Rendering page {page_index + 1}/{total_pages}...")
