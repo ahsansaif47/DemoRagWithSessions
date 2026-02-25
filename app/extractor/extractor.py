@@ -49,7 +49,7 @@ class PDFContentExtractor:
 
             page_content = PageContent(
                 page_number=page_num,
-                page_text=[text],
+                page_text=text,
             )
 
             page_image = self.render_page(page)

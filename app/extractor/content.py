@@ -11,7 +11,7 @@ class ExtractedImage:
 class PageContent:
     page_number: int = 0
     images: List[ExtractedImage] = field(default_factory=list)
-    page_text: list = field(default_factory=list)
+    page_text: str = ""
 
 
 @dataclass
