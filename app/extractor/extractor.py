@@ -15,7 +15,7 @@ class PDFContentExtractor:
             self,
             pdf_path: str,
             include_page_markers: bool = True,
-            model_path: str = "",
+            model_path: str = "../../scripts/models/yolov8s-doclaynet.pt",
             dpi: int = 300,
             conf: float = 0.25,
     ):
@@ -92,5 +92,5 @@ class PDFContentExtractor:
 
 extractor = PDFContentExtractor("../../resources/archive/Book_12_Ops.pdf", include_page_markers=True, model_path="../../scripts/models/yolov8s-doclaynet.pt")
 e_content = extractor.extract()
-# print(e_content)
+print(e_content)
 
