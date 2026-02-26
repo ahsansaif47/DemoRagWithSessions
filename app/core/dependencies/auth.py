@@ -3,11 +3,13 @@ from fastapi import Depends, HTTPException
 from app.repository.auth import JWTAuthRepository
 from app.service.auth import JWTAuthService
 from app.api.handlers.auth import JWTAuthHandler
-# from app.core.dependencies.database import get_database
 from app.repository.database import get_database_connection
-from app.utils.jwt import Claim
+from app.core.dependencies import config
 from app.utils.jwt import JWTHandler
+from app.utils.jwt import Claim
 import logging
+
+jwt_config = config.AppConfig().jwt_config
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +29,7 @@ def get_jwt_claim(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> Claim | None:
     try:
-        # TODO: Get the secret key from the config
-        jwt_handler = JWTHandler("")
+        jwt_handler = JWTHandler(jwt_config.secret_key)
         token = credentials.credentials
         return jwt_handler.decode_token(token)
     except Exception as e:

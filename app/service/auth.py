@@ -1,3 +1,4 @@
+from app.config.config import AppConfig
 from app.dto.users import (
     UserRegistrationRequestDTO,
     UserLoginRequestDTO,
@@ -7,6 +8,10 @@ from app.dto.users import (
 from app.utils import utils, jwt
 from app.repository.auth import JWTAuthRepository
 import logging
+from app.core.dependencies.config import config
+
+
+jwt_config = AppConfig().jwt_config
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +51,7 @@ class JWTAuthService:
 
     def login(self, data: UserLoginRequestDTO) -> UserLoginResponseDTO | None:
         try:
-            jwt_handler = jwt.JWTHandler("")
+            jwt_handler = jwt.JWTHandler(jwt_config.secret_key)
             user_data = self.user_repository.get_user_by_email(data.email)
             if user_data is not None:
 
