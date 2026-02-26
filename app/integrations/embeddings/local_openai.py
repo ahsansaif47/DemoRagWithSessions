@@ -21,7 +21,7 @@ import open_clip
 
 
 class ImageEmbeddingService:
-    def __init__(self, model_name: str, pretrained: str):
+    def __init__(self, model_name: str = "ViT-L-14", pretrained: str = "laion2b_s32b_b82k"):
         self.model, _, self.preprocess = open_clip.create_model_and_transforms(model_name, pretrained=pretrained)
         self.tokenizer = open_clip.get_tokenizer(model_name)
 

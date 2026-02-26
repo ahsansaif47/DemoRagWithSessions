@@ -1,15 +1,16 @@
+from app.pdf_extractor.image_extractor import extract_visual_elements
+from app.pdf_extractor.text_extractor import TextExtractor
+from app.dto.document import UploadPDFRequestDTO, DocData
+from app.extractor.extractor import PDFContentExtractor
+from app.repository.document import DocumentRepository
+from app.core.dependencies.config import config
 import logging
 import os
-from app.repository.document import DocumentRepository
-from app.pdf_extractor.text_extractor import TextExtractor
-from app.pdf_extractor.image_extractor import extract_visual_elements
-from app.dto.document import UploadPDFRequestDTO, DocData
-
-from app.core.dependencies.config import config
 
 logger = logging.getLogger(__name__)
 
 visuals_model_path = "../../scripts/models/yolov8s-doclaynet.pt"
+
 
 class DocumentService:
     def __init__(self, document_repository: DocumentRepository):
@@ -19,7 +20,6 @@ class DocumentService:
         try:
             # TODO: Get the user id using JWT Token
             user_id = user_id
-
 
             local_pdf_dir = config.storage.local_storage
             user_pdf_dir = os.path.join(local_pdf_dir, user_id)
@@ -34,6 +34,8 @@ class DocumentService:
             file_size_bytes = os.path.getsize(user_file)
             txt_extractor = TextExtractor(document.file_name, user_file)
 
+            pdf_extractor = PDFContentExtractor(user_file)
+            extracted_content = pdf_extractor.extract()
 
             doc_data = DocData()
             doc_data.file_name = document.file_name
@@ -42,7 +44,6 @@ class DocumentService:
 
             # TODO: Get the images directory from the config
             extract_visual_elements(user_pdf_dir, visuals_model_path, config.storage.local_storage)
-
 
             # Get the textual content from the text extractor
             content = txt_extractor.extract_text()
@@ -66,8 +67,6 @@ class DocumentService:
                 7. Save to postgres. 
             '''
 
-
-
             # Load from the config the general document directory path then do {documents_direc}/
             # TODO: Use the text and image extractor to get the data from pdf document
             pass
@@ -79,3 +78,6 @@ class DocumentService:
             return self.document_repository.remove_document(document_id)
         except Exception as e:
             raise e
+
+
+ds = DocumentService()
