@@ -85,15 +85,3 @@ class DocumentService:
             return self.document_repository.remove_document(document_id)
         except Exception as e:
             raise e
-
-
-
-# doc = UploadPDFRequestDTO()
-# doc.file_name = "Book_01_Air Law.pdf"
-# doc.file_path = "../../resources/archive/Book_01_Air Law.pdf"
-# document_repo = DocumentRepository(database.get_database())
-# ds = DocumentService(document_repo)
-#
-#
-# u_uuid = str(uuid.uuid4())
-# ds.add_document(u_uuid, doc)

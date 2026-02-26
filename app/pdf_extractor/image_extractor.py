@@ -163,16 +163,3 @@ def extract_visual_elements(
     gc.collect()
 
     return unique_count
-
-
-
-# # TODO: Remove this. This is just for testing
-# m_path = "../../../scripts/models/yolov8s-doclaynet.pt"
-# test_pdf = "../../../resources/archive/Book_01_Air Law.pdf"
-#
-#
-# name_split = test_pdf.split("/")[-1].replace(".pdf", "")
-# extracted_images_path = f"../../../resources/images/{name_split}"
-#
-# unique_count = extract_visual_elements(test_pdf, m_path, extracted_images_path)
-# print(unique_count)

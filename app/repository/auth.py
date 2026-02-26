@@ -1,20 +1,18 @@
-import uuid
-
-from psycopg.types.datetime import utc
-
-from app.dto.users import UserLoginRequestDTO, UserRegistrationRequestDTO
+from app.dto.users import UserRegistrationRequestDTO
 from datetime import datetime, timezone
-from psycopg import errors
-from app.domain import exceptions
 from app.models.user import UserModel
+from app.domain import exceptions
+from psycopg import errors
+from app.utils.utils import generate_password_hash
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
 class JWTAuthRepository:
     def __init__(self, conn):
         self.conn = conn
-        self.user_columns = ["id", "username", "email", "phone_no", "password_hash", "created_at","updated_at", "deleted_at"]
+        self.user_columns = ["id", "name", "email", "phone_number", "password_hash", "created_at","updated_at", "deleted_at"]
         self.cols_str = ", ".join(self.user_columns)
 
     def signup(self, user: UserRegistrationRequestDTO) -> uuid.UUID | None:
@@ -24,8 +22,8 @@ class JWTAuthRepository:
                 query = f"INSERT INTO users({self.cols_str}) VALUES({placeholders})"
 
                 trans_id = uuid.uuid4()
-                # TODO: Generate the password hash here and use it in the repo layer onwards
-                password_hash = ""
+                # TODO: Move this password hash part to service layer
+                password_hash = generate_password_hash(user.password)
                 now = datetime.now(timezone.utc)
                 values = (
                     trans_id,

@@ -1,4 +1,4 @@
-from pydantic import validator, EmailStr, Field, BaseModel, field_validator
+from pydantic import validator, EmailStr, Field, BaseModel, field_validator, ValidationInfo
 from datetime import datetime
 from app.utils import validation
 
@@ -13,24 +13,24 @@ class UserRegistrationRequestDTO(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     @field_validator("password")
-    @staticmethod
+    @classmethod
     def password_must_be_strong(cls, v):
         valid, msg = validation.check_strong_password(v)
         if not valid:
             raise ValueError(msg)
-        UserRegistrationRequestDTO.password = v
+        return v
 
     @field_validator("phone_number")
-    @staticmethod
+    @classmethod
     def phone_must_be_valid(cls, v):
         valid, msg = validation.validate_phone(v)
         if not valid:
             raise ValueError(msg)
-        UserRegistrationRequestDTO.phone_number = v
+        return v
 
     @field_validator("name")
-    @staticmethod
-    def name_must_be_valid(cls, v):
+    @classmethod
+    def name_must_be_valid(cls, v, info: ValidationInfo):
         valid, msg = validation.validate_name(v)
         if not valid:
             raise ValueError(msg)
@@ -41,6 +41,7 @@ class UserCreatedData(BaseModel):
     user_id: str
     email: EmailStr
     is_verified: bool
+    phone_number: str
 
 
 class UserRegistrationResponseDTO(BaseModel):
@@ -66,16 +67,16 @@ class UpdateUserRequestDTO:
     password: str
 
     @field_validator("password")
-    @staticmethod
-    def password_must_be_strong(cls, v):
+    @classmethod
+    def password_must_be_strong(cls, v, info: ValidationInfo):
         valid, msg = validation.check_strong_password(v)
         if not valid:
             raise ValueError(msg)
         UpdateUserRequestDTO.password = v
 
     @field_validator("phone_number")
-    @staticmethod
-    def phone_must_be_valid(cls, v):
+    @classmethod
+    def phone_must_be_valid(cls, v, info: ValidationInfo):
         valid, msg = validation.validate_phone(v)
         if not valid:
             raise ValueError(msg)

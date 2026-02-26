@@ -19,17 +19,24 @@ class JWTAuthService:
         try:
             user_id = self.user_repository.signup(data)
             if user_id is not None:
-                user_data = UserCreatedData()
-                # TODO: Might need to convert user_id to string..
-                # NOTE: Currently its uuid.UUID
-                user_data.id = user_id
-                user_data.email = data.email
-                user_data.is_verified = False
+                user_data = UserCreatedData(
+                    user_id=str(user_id),
+                    email=data.email,
+                    is_verified=False,
+                    phone_number=data.phone_number
+                )
+                # # TODO: Might need to convert user_id to string..
+                # # NOTE: Currently its uuid.UUID
+                # user_data.id = user_id
+                # user_data.email = data.email
+                # user_data.is_verified = False
+                # user_data.phone_number = data.phone_number
 
-                response = UserRegistrationResponseDTO()
-                response.data = user_data
-                response.status = "201"
-                response.message = "User created successfully"
+                response = UserRegistrationResponseDTO(
+                    message="User Created Successfully",
+                    data=user_data,
+                    status="201"
+                )
 
                 return response
             return None

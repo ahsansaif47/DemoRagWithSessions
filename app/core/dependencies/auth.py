@@ -3,14 +3,15 @@ from fastapi import Depends, HTTPException
 from app.repository.auth import JWTAuthRepository
 from app.service.auth import JWTAuthService
 from app.api.handlers.auth import JWTAuthHandler
-from app.core.dependencies.database import get_database
+# from app.core.dependencies.database import get_database
+from app.repository.database import get_database_connection
 from app.utils.jwt import Claim
 from app.utils.jwt import JWTHandler
 import logging
 
 logger = logging.getLogger(__name__)
 
-def get_auth_repository(db=Depends(get_database)):
+def get_auth_repository(db=Depends(get_database_connection)):
     return JWTAuthRepository(db)
 
 def get_auth_service(repo=Depends(get_auth_repository)):
