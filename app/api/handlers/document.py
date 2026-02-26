@@ -1,6 +1,7 @@
 from fastapi import UploadFile, File, Depends, HTTPException
 from app.service.document import DocumentService
 from app.repository.document import DocumentRepository
+# TODO: Replace this get_database function with get_database_connection from app.repositories.database
 from app.core.dependencies.database import get_database
 from app.dto.document import UploadPDFRequestDTO
 from app.core.dependencies.config import config

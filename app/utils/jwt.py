@@ -1,8 +1,13 @@
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import jwt
 from dataclasses import dataclass, asdict
 import logging
+
+from app.config.config import AppConfig
+from app.core.dependencies import config
+
+jwt_config = AppConfig().jwt_config
 
 logger = logging.getLogger(__name__)
 
@@ -12,14 +17,14 @@ class Claim:
     email: str
 
 class JWTHandler:
-    def __init__(self, secret_key: str, algorithm: str = "HS256", expiration: int = 3600):
+    def __init__(self, secret_key: str = jwt_config.secret_key, algorithm: str = "HS256", expiration: int = 3600):
         self.secret_key = secret_key
         self.algorithm = algorithm
         self.expiration = expiration
 
     def create_jwt(self, claim: Claim):
         data = asdict(claim)
-        expiry_time = datetime.utcnow() + timedelta(seconds=self.expiration)
+        expiry_time = datetime.now(timezone.utc) + timedelta(seconds=self.expiration)
         data.update({"exp": expiry_time})
         return jwt.encode(data, self.secret_key, algorithm=self.algorithm)
 

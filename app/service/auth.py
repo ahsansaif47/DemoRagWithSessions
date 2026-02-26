@@ -58,7 +58,12 @@ class JWTAuthService:
                 if user_data.deleted_at is not None:
                     pass
 
-                response = UserLoginResponseDTO()
+                response = UserLoginResponseDTO(
+                    message="User Login Successful",
+                    status="200",
+                    user_id=str(user_data.user_id),
+                    jwt_token=""
+                )
                 password_status = utils.verify_password(data.password, user_data.password_hash)
                 if not password_status:
                     logger.info("Service: Invalid User Credentials")
@@ -68,7 +73,7 @@ class JWTAuthService:
 
 
                 jwt_claim = jwt.Claim(
-                    user_id=user_data.user_id,
+                    user_id=str(user_data.user_id),
                     email=user_data.email
                 )
                 # TODO: Generate the JWT Token using the jwt in utils
