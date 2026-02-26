@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class DocumentModel:
@@ -7,5 +7,5 @@ class DocumentModel:
         self.user_id = user_id
         self.file_name = file_name
         self.file_size = file_size
-        self.created_at = datetime.now().utcnow()
-        self.updated_at = datetime.now().utcnow()
+        self.created_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(timezone.utc)

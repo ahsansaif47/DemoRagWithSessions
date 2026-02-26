@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from app.dto.document import DocData
 
 from app.models.document import DocumentModel
@@ -40,7 +40,7 @@ class DocumentRepository:
                 self.conn.commit()
 
                 logger.info(f"Repo: Document {doc_model.file_name} added to {doc_model.user_id}")
-                return trans_id
+                return uuid.UUID(doc.file_id)
         except Exception as e:
             logger.error(f'Repo: Document Upload Error: {str(e)}')
             self.conn.rollback()
@@ -51,7 +51,7 @@ class DocumentRepository:
             with self.conn.cursor() as cursor:
                 # Mark Document Text Soft Deleted
                 soft_delete_file_text_q = "UPDATE document_texts SET deleted_at = '%s' WHERE file_id = '%s'"
-                values = (datetime.now().utcnow(), doc_id)
+                values = (datetime.now(timezone.utc), doc_id)
                 cursor.execute(soft_delete_file_text_q, values)
 
                 # Mark Document Images Soft Deleted

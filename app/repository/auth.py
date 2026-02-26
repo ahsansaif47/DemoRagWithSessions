@@ -1,6 +1,9 @@
 import uuid
+
+from psycopg.types.datetime import utc
+
 from app.dto.users import UserLoginRequestDTO, UserRegistrationRequestDTO
-from datetime import datetime
+from datetime import datetime, timezone
 from psycopg import errors
 from app.domain import exceptions
 from app.models.user import UserModel
@@ -23,15 +26,15 @@ class JWTAuthRepository:
                 trans_id = uuid.uuid4()
                 # TODO: Generate the password hash here and use it in the repo layer onwards
                 password_hash = ""
-                now = datetime.now()
+                now = datetime.now(timezone.utc)
                 values = (
                     trans_id,
                     user.name,
                     user.email,
                     user.phone_number,
                     password_hash,
-                    now.utcnow(),
-                    now.utcnow(),
+                    now,
+                    now,
                     None
                 )
                 cursor.execute(query, values)
