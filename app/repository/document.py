@@ -12,17 +12,16 @@ class DocumentRepository:
     def __init__(self, conn):
         self.conn = conn
         self.document_columns = ["id", "user_id", "file_name", "file_size", "created_at", "updated_at"]
-        self.document_columns_str = ", ".join(self.files_columns)
+        self.document_columns_str = ", ".join(self.document_columns)
 
     def add_document(self, doc: DocData) -> uuid.UUID | None:
         try:
             with self.conn.cursor() as cursor:
                 placeholders = ",".join(["%s"] * len(self.document_columns))
                 query = f'INSERT INTO files({self.document_columns_str}) VALUES({placeholders})'
-                trans_id = uuid.uuid4()
 
                 doc_model = DocumentModel(
-                    file_id=trans_id,
+                    file_id=doc.file_id,
                     user_id=doc.user_id,
                     file_name=doc.file_name,
                     file_size=doc.file_size

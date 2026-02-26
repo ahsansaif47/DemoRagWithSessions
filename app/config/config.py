@@ -20,10 +20,26 @@ class AzureDBConfig:
     db: str = os.getenv("AZURE_DB", "")
 
 
+# TODO: Make 2 separate classes for local and azure config each with pdf, images and archive directory environment
+@dataclass
+class LocalStorageConfig:
+    pdf_dir: str = os.getenv("LOCAL_PDF_DIR", "")
+    images_dir: str = os.getenv("LOCAL_IMAGES_DIR", "")
+    archive_dir: str = os.getenv("LOCAL_ARCHIVE_DIR", "")
+
+
+@dataclass
+class AzureStorageConfig:
+    pdf_dir: str = os.getenv("AZURE_PDF_DIR", "")
+    images_dir: str = os.getenv("AZURE_IMAGES_DIR", "")
+    archive_dir: str = os.getenv("AZURE_ARCHIVE_DIR", "")
+
+
+
 @dataclass
 class StorageConfig:
-    local_storage: str = os.getenv("LOCAL_STORE", "")
-    azure_blob_storage: str = os.getenv("AZURE_BLOB_STORAGE", "")
+    local_storage_config: LocalStorageConfig = field(default_factory=LocalStorageConfig)
+    azure_blob_storage_config: AzureStorageConfig = field(default_factory=AzureStorageConfig)
 
 
 # TODO: Use this config for token creation and validation

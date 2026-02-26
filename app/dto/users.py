@@ -13,20 +13,23 @@ class UserRegistrationRequestDTO(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     @field_validator("password")
-    def password_must_be_strong(self, v):
+    @staticmethod
+    def password_must_be_strong(cls, v):
         valid, msg = validation.check_strong_password(v)
         if not valid:
             raise ValueError(msg)
-        self.password = v
+        UserRegistrationRequestDTO.password = v
 
     @field_validator("phone_number")
-    def phone_must_be_valid(self, v):
+    @staticmethod
+    def phone_must_be_valid(cls, v):
         valid, msg = validation.validate_phone(v)
         if not valid:
             raise ValueError(msg)
-        self.phone_number = v
+        UserRegistrationRequestDTO.phone_number = v
 
     @field_validator("name")
+    @staticmethod
     def name_must_be_valid(cls, v):
         valid, msg = validation.validate_name(v)
         if not valid:
@@ -34,13 +37,13 @@ class UserRegistrationRequestDTO(BaseModel):
         return v
 
 
-class UserCreatedData:
+class UserCreatedData(BaseModel):
     user_id: str
     email: EmailStr
     is_verified: bool
 
 
-class UserRegistrationResponseDTO:
+class UserRegistrationResponseDTO(BaseModel):
     status: str
     message: str
     data: UserCreatedData
@@ -51,7 +54,7 @@ class UserLoginRequestDTO(BaseModel):
     password: str
 
 
-class UserLoginResponseDTO:
+class UserLoginResponseDTO(BaseModel):
     status: str
     message: str
     jwt_token: str
@@ -63,15 +66,17 @@ class UpdateUserRequestDTO:
     password: str
 
     @field_validator("password")
-    def password_must_be_strong(self, v):
+    @staticmethod
+    def password_must_be_strong(cls, v):
         valid, msg = validation.check_strong_password(v)
         if not valid:
             raise ValueError(msg)
-        self.password = v
+        UpdateUserRequestDTO.password = v
 
     @field_validator("phone_number")
-    def phone_must_be_valid(self, v):
+    @staticmethod
+    def phone_must_be_valid(cls, v):
         valid, msg = validation.validate_phone(v)
         if not valid:
             raise ValueError(msg)
-        self.phone_no = v
+        UpdateUserRequestDTO.phone_no = v

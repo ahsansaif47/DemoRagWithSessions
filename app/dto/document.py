@@ -1,3 +1,4 @@
+import uuid
 
 
 class UploadPDFRequestDTO:
@@ -11,5 +12,6 @@ class UploadPDFResponseDTO:
 
 class DocData:
     user_id: str
+    file_id: str
     file_name: str
     file_size: int

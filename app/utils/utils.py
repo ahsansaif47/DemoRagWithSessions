@@ -18,3 +18,6 @@ def verify_password(password: str, hashed_password: str) -> bool | None:
     except Exception as e:
         logger.error(f'Password/Hash Comparison Failed: {str(e)}')
         return None
+
+def sanitize_file_names(file_name: str) -> str:
+    raise NotImplementedError()

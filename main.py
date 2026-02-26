@@ -1,7 +1,11 @@
+from fastapi import FastAPI
+
 from app.repository.database import PostgresPool
 from app.config import config
 from app.utils import database
 from app.core.dependencies import logging
+from app.api.app_router import api_router
+import uvicorn
 
 
 # FIXME: Get the extractor out of the core package
@@ -42,10 +46,15 @@ dsn = database.generate_dsn(
 
 PostgresPool.init(dsn)
 
+app = FastAPI(title="Demo Rag With Sessions")
+app.include_router(api_router)
+
 
 if __name__ == '__main__':
-    print('PyCharm')
-    with PostgresPool.get_local_pool().connection() as connection:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT NOW();")
-            print(cursor.fetchall())
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, log_level="info")
+
+    # print('PyCharm')
+    # with PostgresPool.get_local_pool().connection() as connection:
+    #     with connection.cursor() as cursor:
+    #         cursor.execute("SELECT NOW();")
+    #         print(cursor.fetchall())

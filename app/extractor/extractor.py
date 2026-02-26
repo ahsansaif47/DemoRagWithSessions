@@ -65,6 +65,7 @@ class PDFContentExtractor:
                 total_images += 1
 
                 _, buffer = cv2.imencode(".jpg", crop['image'])
+                image_name = f'page_{page_num}_vis_{i}.png'
 
                 # TODO: Save this in your service layer
                 # pdf_name = self.pdf_path.split("/")[-1].split(".")[0]
@@ -80,6 +81,7 @@ class PDFContentExtractor:
                 img = ExtractedImage(
                     image_number=i,
                     image_data=buffer.tobytes(),
+                    image_name=image_name
                 )
 
                 page_content.images.append(img)
@@ -87,10 +89,4 @@ class PDFContentExtractor:
         content.total_images = total_images
         content.raw_text = raw_text
         return content
-
-
-
-extractor = PDFContentExtractor("../../resources/archive/Book_12_Ops.pdf", include_page_markers=True, model_path="../../scripts/models/yolov8s-doclaynet.pt")
-e_content = extractor.extract()
-print(e_content)
 

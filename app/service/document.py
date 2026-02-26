@@ -1,11 +1,15 @@
-from app.pdf_extractor.image_extractor import extract_visual_elements
-from app.pdf_extractor.text_extractor import TextExtractor
 from app.dto.document import UploadPDFRequestDTO, DocData
 from app.extractor.extractor import PDFContentExtractor
+from app.knowledge_unit_factory import knowledge_units
 from app.repository.document import DocumentRepository
+from app.integrations.storage import local_storage
 from app.core.dependencies.config import config
 import logging
+import uuid
 import os
+
+
+from app.core.dependencies import database
 
 logger = logging.getLogger(__name__)
 
@@ -16,60 +20,63 @@ class DocumentService:
     def __init__(self, document_repository: DocumentRepository):
         self.document_repository = document_repository
 
+    # FIXME: Use the config variable to interact with the local and azure storage and database
     def add_document(self, user_id: str, document: UploadPDFRequestDTO):
         try:
             # TODO: Get the user id using JWT Token
             user_id = user_id
+            file_id = uuid.uuid4()
+            file_id_str = str(file_id)
 
-            local_pdf_dir = config.storage.local_storage
+
+
+            # NOTE: Check if this might be done in the handlers layer
+            # Create the user document directory using the user_id
+            # No need to create the directory ending with file name else every book directory will just have one single PDF
+            local_pdf_dir = config.storage.local_storage_config.pdf_dir
             user_pdf_dir = os.path.join(local_pdf_dir, user_id)
-
             os.makedirs(user_pdf_dir, exist_ok=True)
-            # TODO: Call the file chunk save from the
 
-            # TODO: Get the local path from the config
 
-            # Get the absolute file path from the users PDF directory
-            user_file = os.path.join(user_pdf_dir, document.file_name)
-            file_size_bytes = os.path.getsize(user_file)
-            txt_extractor = TextExtractor(document.file_name, user_file)
+            # Create the user images directory using the user_id and sanitized_file_name
+            local_images_dir = config.storage.local_storage_config.images_dir
+            user_images_dir = os.path.join(local_images_dir, user_id, file_id_str)
+            os.makedirs(user_images_dir, exist_ok=True)
 
-            pdf_extractor = PDFContentExtractor(user_file)
+
+            user_pdf_file = os.path.join(user_pdf_dir, file_id_str+".pdf")
+            file_size_bytes = os.path.getsize(user_pdf_file)
+
+            pdf_extractor = PDFContentExtractor(user_pdf_dir)
             extracted_content = pdf_extractor.extract()
+
+            # FIXME: Generate the file_id i.e. uuid.UUID in the service later and then pass to repo
+            # TODO: file_id is required in the service layer generate it here and pass to repository layer to generate a record
+
+            text_knowledge_units = knowledge_units.build_text_knowledge_units(extracted_content, file_id)
+
+            # TODO: Get the path using the user_id and sanitized_file_name to navigate to user uploaded book images
+            # And call the image knowledge units code over here
+            for pg_content in extracted_content.page_content:
+                images = pg_content.images
+                for img in images:
+                    img_save_path = os.path.join(user_images_dir, img.image_name)
+                    local_storage.save_image(img_save_path, img.image_data)
+
+            image_knowledge_units = knowledge_units.build_image_knowledge_units(user_images_dir, file_id)
+
+            # TODO: Wite a function in document repository to insert the image and text knowledge units in database
+
 
             doc_data = DocData()
             doc_data.file_name = document.file_name
             doc_data.file_size = file_size_bytes
             doc_data.user_id = user_id
+            doc_data.file_id = str(file_id.bytes)
 
-            # TODO: Get the images directory from the config
-            extract_visual_elements(user_pdf_dir, visuals_model_path, config.storage.local_storage)
-
-            # Get the textual content from the text extractor
-            content = txt_extractor.extract_text()
-            for idx, data in enumerate(content.page_content):
-                for _, element in enumerate(data.images):
-                    # TODO: Generate the text embeddings here
-                    pass
 
             # TODO: Get the images using the images get function
             self.document_repository.add_document(doc_data)
-            # TODO: Enrich the textual content with the images in it.
-
-            '''
-                Steps:
-                1. Load the documents directory from the config.
-                2. Check if the user documents directory exists?
-                3. If exists, navigate to users documents directory.
-                4. Pick the file from user's documents directory.
-                5. Extract images/text.
-                6. Generate embeddings.
-                7. Save to postgres. 
-            '''
-
-            # Load from the config the general document directory path then do {documents_direc}/
-            # TODO: Use the text and image extractor to get the data from pdf document
-            pass
         except Exception as e:
             raise e
 
@@ -80,4 +87,13 @@ class DocumentService:
             raise e
 
 
-ds = DocumentService()
+
+# doc = UploadPDFRequestDTO()
+# doc.file_name = "Book_01_Air Law.pdf"
+# doc.file_path = "../../resources/archive/Book_01_Air Law.pdf"
+# document_repo = DocumentRepository(database.get_database())
+# ds = DocumentService(document_repo)
+#
+#
+# u_uuid = str(uuid.uuid4())
+# ds.add_document(u_uuid, doc)
