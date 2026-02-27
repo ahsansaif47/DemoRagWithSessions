@@ -2,26 +2,28 @@ from fastapi import UploadFile, File, Depends, HTTPException
 from app.service.document import DocumentService
 from app.repository.document import DocumentRepository
 # TODO: Replace this get_database function with get_database_connection from app.repositories.database
-from app.core.dependencies.database import get_database
+# from app.core.dependencies.database import get_database
+from app.repository.database import get_database_connection
 from app.dto.document import UploadPDFRequestDTO
 from app.core.dependencies.config import config
 from app.core.dependencies.auth import get_jwt_claim
 import uuid
+from app.utils.jwt import Claim
 import os
 
 
 def get_document_service():
-    repo = DocumentRepository(get_database())
+    repo = DocumentRepository(get_database_connection)
     return DocumentService(repo)
 
 
 async def upload_document(
     file: UploadFile = File(...),
-    claims:dict = Depends(get_jwt_claim),
+    claims:Claim = Depends(get_jwt_claim),
     service: DocumentService = Depends(get_document_service),
 ):
     try:
-        user_id = claims["user_id"]
+        user_id = claims.user_id
 
         # Generate file ID
         file_id = str(uuid.uuid4())

@@ -35,7 +35,7 @@ class DocumentService:
             # No need to create the directory ending with file name else every book directory will just have one single PDF
             local_pdf_dir = config.storage.local_storage_config.pdf_dir
             user_pdf_dir = os.path.join(local_pdf_dir, user_id)
-            os.makedirs(user_pdf_dir, exist_ok=True)
+            # os.makedirs(user_pdf_dir, exist_ok=True)
 
 
             # Create the user images directory using the user_id and sanitized_file_name
