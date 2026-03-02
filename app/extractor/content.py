@@ -5,7 +5,7 @@ from typing import List
 @dataclass
 class ExtractedImage:
     image_number: int = 1
-    image_data: bytes = b''
+    # image_data: bytes = b''
     image_name: str = ""
 
 @dataclass

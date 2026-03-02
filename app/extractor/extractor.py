@@ -1,5 +1,6 @@
 import datetime
 import os
+from pathlib import Path
 
 from app.extractor.visual import crop_regions, phash_image, is_duplicate
 from app.extractor.content import ExtractedContent, PageContent, ExtractedImage
@@ -7,7 +8,17 @@ from app.extractor.visual import VisualDetector
 from app.extractor.text import clean_text
 import numpy as np
 import fitz
+from app.integrations.storage import local_storage
 import cv2
+
+# TODO: Wrap this in a function and return the path
+# FIXME: Ensure nothing is a global variable
+base_path = Path(__file__).resolve().parents[2]
+m_path = base_path / "scripts" / "models"
+weights = os.path.join(str(m_path), "yolov8s-doclaynet.pt")
+
+images_path = base_path / "resources" / "images"
+# images_path = str(images_path)
 
 
 class PDFContentExtractor:
@@ -15,7 +26,7 @@ class PDFContentExtractor:
             self,
             pdf_path: str,
             include_page_markers: bool = True,
-            model_path: str = "../../scripts/models/yolov8s-doclaynet.pt",
+            model_path: str = weights,
             dpi: int = 300,
             conf: float = 0.25,
     ):
@@ -31,21 +42,22 @@ class PDFContentExtractor:
         del pix
         return img
 
-    def extract(self) -> ExtractedContent:
+    def extract(self, user_img_dir: str) -> ExtractedContent:
+        global images_path
         content = ExtractedContent()
         doc = fitz.open(self.pdf_path)
 
         content.total_pages = doc.page_count
 
-        seen_hashes = []
+        seen_hashes = set()
         total_images = 0
         raw_text = ""
 
         for page_num, page in enumerate(doc, start=1):
             text = clean_text(page.get_text() or "")
             if self.include_page_markers:
-                text = f"[PAGE: {page_num}]\n{text}]"
-                raw_text += text + "\n"
+                text = f"[PAGE: {page_num}]\n{text}"
+            raw_text += text + "\n"
 
             page_content = PageContent(
                 page_number=page_num,
@@ -56,37 +68,31 @@ class PDFContentExtractor:
             detections = self.visual_detector.detect(page_image)
             crops = crop_regions(page_image, detections, page_num)
 
+            images = []
             for i, crop in enumerate(crops):
                 crop_hash = phash_image(crop['image'])
                 if is_duplicate(crop_hash, seen_hashes):
                     continue
 
-                seen_hashes.append(crop_hash)
+                seen_hashes.add(crop_hash)
                 total_images += 1
 
                 _, buffer = cv2.imencode(".jpg", crop['image'])
-                image_name = f'page_{page_num}_vis_{i}.png'
+                image_name = f'page_{page_num}_vis_{i}.jpg'
 
-                # TODO: Save this in your service layer
-                # pdf_name = self.pdf_path.split("/")[-1].split(".")[0]
-                # dir_path = f'../../resources/temp_images/{pdf_name}'
-                # os.makedirs(dir_path, exist_ok=True)
-                # file_name = os.path.join(dir_path, f"page_{pdf_name}_vis_{i}.jpg")
-                #
-                #
-                # with open(file_name, "wb") as f:
-                #     f.write(buffer.tobytes())
-                # TODO: Code cleanup after saving file
+                # Save the image file in this function.
+                img_path = os.path.join(user_img_dir, image_name)
+                local_storage.save_image(img_path, buffer.tobytes())
 
                 img = ExtractedImage(
                     image_number=i,
-                    image_data=buffer.tobytes(),
                     image_name=image_name
                 )
 
-                page_content.images.append(img)
+                images.append(img)
+
+            page_content.images = images
             content.page_content.append(page_content)
         content.total_images = total_images
         content.raw_text = raw_text
         return content
-
