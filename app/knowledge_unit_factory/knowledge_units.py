@@ -6,13 +6,18 @@ from app.knowledge_unit_factory.text_knowledge_unit import TextKnowledgeUnit
 from app.integrations.embeddings.local_openai import E5EmbeddingService, ImageEmbeddingService
 from app.extractor.content import ExtractedContent
 import uuid
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def build_text_knowledge_units(contents: ExtractedContent, file_id: uuid.UUID) -> List[TextKnowledgeUnit]:
     text_embedder = E5EmbeddingService()
 
     text_knowledge_units: List[TextKnowledgeUnit] = []
-    for _, content in enumerate(contents.page_content):
+    total_pages = len(contents.page_content)
+    for i, content in enumerate(contents.page_content):
         text = content.page_text
 
         text_embeddings = text_embedder.embed_query(text, "passage")
@@ -20,8 +25,9 @@ def build_text_knowledge_units(contents: ExtractedContent, file_id: uuid.UUID) -
             file_id=file_id,
             page_number=content.page_number,
             text=text,
-            embedding=text_embeddings,
+            embedding=text_embeddings.tolist(),
         )
+        logger.info(f'Successfully processed {i} out of {total_pages}')
 
         text_knowledge_units.append(text_k_unit)
     return text_knowledge_units
@@ -31,10 +37,14 @@ def build_image_knowledge_units(user_book_images_dir: str, file_id: uuid.UUID) -
 
     image_knowledge_units: List[ImageKnowledgeUnit] = []
     images = os.listdir(user_book_images_dir)
+    i = 0
+    total_images = len(images)
     for img in images:
         name_split = img.split("_")
         page_number = int(name_split[1])
-        img_embeddings = image_embedder.embed_image(img)
+
+        img_path = os.path.join(user_book_images_dir, img)
+        img_embeddings = image_embedder.embed_image(img_path)
 
         image_knowledge_unit = ImageKnowledgeUnit.create(
             file_id=file_id,
@@ -42,6 +52,8 @@ def build_image_knowledge_units(user_book_images_dir: str, file_id: uuid.UUID) -
             image_path=img,
             embedding=img_embeddings,
         )
+        logger.info(f'Successfully processed {i} out of {total_images}')
+        i+=1
 
         image_knowledge_units.append(image_knowledge_unit)
     return image_knowledge_units

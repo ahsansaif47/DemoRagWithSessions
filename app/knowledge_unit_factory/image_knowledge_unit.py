@@ -11,7 +11,7 @@ class ImageKnowledgeUnit:
     page_number: int
     image_path: str
     embedding: Optional[List[float]] = None
-    created_at: datetime = field(default_factory=datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     deleted_at: Optional[datetime] = field(default=None)
 
     @staticmethod
