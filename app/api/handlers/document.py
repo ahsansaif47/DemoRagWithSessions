@@ -67,6 +67,23 @@ class DocumentHandlers:
 
         return res
 
+    async def ask_question(
+            self,
+            user_id: str,  # Extract from JWT in real system
+            question: str
+    ):
+        result = self.document_service.retrieve_and_answer(
+            user_id=user_id,
+            question=question,
+            top_k=5
+        )
+
+        return {
+            "status": "200",
+            "answer": result["answer"],
+            "images": result["images"]
+        }
+
     def remove_document(self, req: RemoveDocumentRequestDTO):
         return self.document_service.remove_document(req.document_id)
 

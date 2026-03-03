@@ -12,9 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def build_text_knowledge_units(contents: ExtractedContent, file_id: uuid.UUID) -> List[TextKnowledgeUnit]:
-    text_embedder = E5EmbeddingService()
-
+def build_text_knowledge_units(contents: ExtractedContent, file_id: uuid.UUID, text_embedder: E5EmbeddingService) -> List[TextKnowledgeUnit]:
     text_knowledge_units: List[TextKnowledgeUnit] = []
     total_pages = len(contents.page_content)
     for i, content in enumerate(contents.page_content):
@@ -32,9 +30,7 @@ def build_text_knowledge_units(contents: ExtractedContent, file_id: uuid.UUID) -
         text_knowledge_units.append(text_k_unit)
     return text_knowledge_units
 
-def build_image_knowledge_units(user_book_images_dir: str, file_id: uuid.UUID) -> List[ImageKnowledgeUnit]:
-    image_embedder = ImageEmbeddingService()
-
+def build_image_knowledge_units(user_book_images_dir: str, file_id: uuid.UUID, image_embedder: ImageEmbeddingService) -> List[ImageKnowledgeUnit]:
     image_knowledge_units: List[ImageKnowledgeUnit] = []
     images = os.listdir(user_book_images_dir)
     i = 0

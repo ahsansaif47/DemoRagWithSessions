@@ -35,7 +35,6 @@ class AzureStorageConfig:
     archive_dir: str = os.getenv("AZURE_ARCHIVE_DIR", "")
 
 
-
 @dataclass
 class StorageConfig:
     local_storage_config: LocalStorageConfig = field(default_factory=LocalStorageConfig)
@@ -50,11 +49,17 @@ class JWTConfig:
 
 
 @dataclass
+class APIKeys:
+    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
+
+
+@dataclass
 class AppConfig:
     local_db: LocalDBConfig = field(default_factory=LocalDBConfig)
     azure_db: AzureDBConfig = field(default_factory=AzureDBConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
     jwt_config: JWTConfig = field(default_factory=JWTConfig)
+    api_keys: APIKeys = field(default_factory=APIKeys)
 
 
 # FIXME: Make the ensure directories function here to ensure all the required directories on application startup

@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 from app.dto.document import DocData
-from typing import List
+from typing import List, Tuple
 from app.utils.utils import chunked, generate_batches
 from app.models.document import DocumentModel, DocumentTextModel, DocumentImageModel
 
@@ -111,6 +111,77 @@ class DocumentRepository:
             logger.error(f'Repo: Document Images Upload Error: {str(e)}')
             self.conn.rollback()
             raise e
+
+
+    def search_similar_texts_with_pages(
+        self,
+        user_id: str,
+        query_embedding: list,
+        top_k: int = 5
+    ) -> List[Tuple[str, int, str]]:
+
+        try:
+            if hasattr(query_embedding, "tolist"):
+                query_embedding = query_embedding.tolist()
+
+            vector_str = f"[{','.join(map(str, query_embedding))}]"
+            with self.conn.cursor() as cursor:
+                query = """
+                    SELECT dt.file_id, dt.page_number, dt.content
+                    FROM document_texts dt
+                    JOIN files f ON dt.file_id = f.id
+                    WHERE f.user_id = %s
+                    ORDER BY dt.embedding <-> %s
+                    LIMIT %s;
+                """
+
+                cursor.execute(query, (user_id, vector_str, top_k))
+                results = cursor.fetchall()
+
+                return results  # [(file_id, page_number, content)]
+
+        except Exception as e:
+            self.conn.rollback()
+            raise e
+
+    # -----------------------------
+    # FETCH IMAGES BY PAGE
+    # -----------------------------
+    def get_images_by_pages(
+        self,
+        file_page_pairs: List[Tuple[str, int]]
+    ) -> List[Tuple[str, int, str]]:
+
+        if not file_page_pairs:
+            return []
+
+        try:
+            with self.conn.cursor() as cursor:
+
+                conditions = []
+                values = []
+
+                for file_id, page_number in file_page_pairs:
+                    conditions.append("(file_id = %s AND page_number = %s)")
+                    values.extend([file_id, page_number])
+
+                where_clause = " OR ".join(conditions)
+
+                query = f"""
+                    SELECT file_id, page_number, image_path
+                    FROM document_images
+                    WHERE {where_clause};
+                """
+
+                cursor.execute(query, values)
+                results = cursor.fetchall()
+
+                return results  # [(file_id, page_number, image_path)]
+
+        except Exception as e:
+            self.conn.rollback()
+            raise e
+
 
     def remove_document(self, doc_id: str) -> bool:
         try:
