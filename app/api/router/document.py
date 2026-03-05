@@ -6,6 +6,8 @@ from app.dto.document import UploadPDFResponseDTO
 from app.core.dependencies.document import get_document_handler
 from app.utils.jwt import Claim
 from app.core.dependencies.auth import get_jwt_claim
+from app.integrations.storage.azure_blob_storage import AzureStorageService
+from app.core.dependencies.azure_storage import get_azure_storage_service
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])

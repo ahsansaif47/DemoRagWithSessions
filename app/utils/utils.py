@@ -1,11 +1,6 @@
-import uuid
-
 import bcrypt
 import logging
 from itertools import islice
-from app.models.document import DocumentTextModel
-from typing import List
-from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -43,3 +38,7 @@ def generate_batches(iterable, batch_size: int):
         if not batch:
             break
         yield batch
+
+# TODO: Call this where you'll be initializing the AzureStorageConfig
+def generate_azure_connection_string(protocol: str, account_name: str, account_key: str) -> str:
+    return f'DefaultEndpointsProtocol={protocol};AccountName={account_name};AccountKey={account_key};EndpointSuffix=core.windows.net'

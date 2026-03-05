@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 import os
 from dotenv import load_dotenv
 from dataclasses import dataclass, field
@@ -28,17 +27,19 @@ class LocalStorageConfig:
     archive_dir: str = os.getenv("LOCAL_ARCHIVE_DIR", "")
 
 
-@dataclass
-class AzureStorageConfig:
-    pdf_dir: str = os.getenv("AZURE_PDF_DIR", "")
-    images_dir: str = os.getenv("AZURE_IMAGES_DIR", "")
-    archive_dir: str = os.getenv("AZURE_ARCHIVE_DIR", "")
+class AzureBlobStorageConfig:
+    endpoints_protocol: str = "https"
+    account_name: str = os.getenv("ACCOUNT_NAME", "")
+    account_key: str = os.getenv("ACCOUNT_KEY", "")
+    pdf_container: str = os.getenv("PDF_CONTAINER_NAME", "")
+    image_container: str = os.getenv("IMAGE_CONTAINER_NAME", "")
 
 
 @dataclass
 class StorageConfig:
     local_storage_config: LocalStorageConfig = field(default_factory=LocalStorageConfig)
-    azure_blob_storage_config: AzureStorageConfig = field(default_factory=AzureStorageConfig)
+    # azure_blob_storage_config: AzureStorageConfig = field(default_factory=AzureStorageConfig)
+    blob_storage_config: AzureBlobStorageConfig = field(default_factory=AzureBlobStorageConfig)
 
 
 # TODO: Use this config for token creation and validation

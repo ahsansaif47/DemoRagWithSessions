@@ -1,11 +1,14 @@
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 
+from app.integrations.storage.azure_blob_storage import AzureStorageService
 from app.repository.database import PostgresPool
 from app.config import config
 from app.utils import database
 from app.core.dependencies import logging
 from app.api.app_router import api_router
 import uvicorn
+from app.core.dependencies.azure_storage import get_azure_storage_service
 
 
 # FIXME: Get the extractor out of the core package
@@ -46,7 +49,15 @@ dsn = database.generate_dsn(
 
 PostgresPool.init(dsn)
 
-app = FastAPI(title="Demo Rag With Sessions")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.azure_storage_service = get_azure_storage_service
+    yield
+
+
+
+
+app = FastAPI(title="Demo Rag With Sessions", lifespan=lifespan)
 app.include_router(api_router)
 
 

@@ -11,7 +11,8 @@ from typing import List
 import os
 from app.integrations.llm.local_openai import OpenAIClient
 from app.integrations.embeddings.local_openai import E5EmbeddingService, ImageEmbeddingService
-
+from app.core.dependencies.azure_storage import get_azure_storage_service
+from app.integrations.storage.azure_blob_storage import AzureStorageService
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +26,14 @@ class DocumentService:
             text_embedder: E5EmbeddingService,
             image_embedder: ImageEmbeddingService,
             openai_client: OpenAIClient,
+            azure_blob_storage: AzureStorageService
+
     ):
         self.document_repository = document_repository
         self.text_embedder = text_embedder
         self.image_embedder = image_embedder
         self.openai_client = openai_client
+        self.azure_blob_storage = azure_blob_storage
 
     # FIXME: Use the config variable to interact with the local and azure storage and database
     def add_document(self, user_id: str, pdf_dir: str, document: UploadPDFRequestDTO):
@@ -42,6 +46,10 @@ class DocumentService:
             images_dir = base_dir / "resources" / "images"
             user_images_dir = images_dir / user_id / file_id
             os.makedirs(user_images_dir, exist_ok=True)
+
+            # Upload file to azure
+            blob_name = f'{user_id}/{file_id}.pdf'
+            self.azure_blob_storage.upload_file(file_path=pdf_dir, blob_name=blob_name, file_type="pdf")
 
 
             file_size_bytes = os.path.getsize(pdf_dir)
