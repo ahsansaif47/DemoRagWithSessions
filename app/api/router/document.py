@@ -1,14 +1,10 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Query
-from sqlalchemy.util import await_only
 
 from app.api.handlers.document import DocumentHandlers
-from app.dto.document import UploadPDFResponseDTO
-from app.core.dependencies.document import get_document_handler
-from app.utils.jwt import Claim
 from app.core.dependencies.auth import get_jwt_claim
-from app.integrations.storage.azure_blob_storage import AzureStorageService
-from app.core.dependencies.azure_storage import get_azure_storage_service
-
+from app.core.dependencies.document import get_document_handler
+from app.dto.document import UploadPDFResponseDTO
+from app.utils.jwt import Claim
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 

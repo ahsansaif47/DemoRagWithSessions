@@ -1,15 +1,20 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
+from app.core.dependencies.knowledge_units_factory import get_knowledge_units_factory
+from app.core.dependencies.llm_client import init_openai_client
+from app.integrations.embeddings.local_openai import E5EmbeddingService, ImageEmbeddingService
 from app.integrations.storage.azure_blob_storage import AzureStorageService
+from app.knowledge_unit_factory.knowledge_units import KnowledgeUnitsFactory
 from app.repository.database import PostgresPool
 from app.config import config
 from app.utils import database
 from app.core.dependencies import logging
 from app.api.app_router import api_router
 import uvicorn
-from app.core.dependencies.azure_storage import get_azure_storage_service
-
+from app.core.dependencies.azure_storage import init_azure_storage_service
+from app.core.dependencies.knowledge_units_factory import init_knowledge_unit_factory
+from app.core.dependencies.embedders import init_text_embedder, init_image_embedder
 
 # FIXME: Get the extractor out of the core package
 # TODO: Create an extractor package and place it there
@@ -35,7 +40,7 @@ config = config.AppConfig()
 # )
 # logger = logging.getLogger(__name__)
 
-# TRYING LOCALDATABASE CONFIG SUCCESSFUL
+# TRYING LOCAL DATABASE CONFIG SUCCESSFUL
 local_db_config = config.local_db
 
 dsn = database.generate_dsn(
@@ -48,13 +53,24 @@ dsn = database.generate_dsn(
 
 
 PostgresPool.init(dsn)
+text_embedder = init_text_embedder()
+image_embedder = init_image_embedder()
+openai_client = init_openai_client()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.azure_storage_service = get_azure_storage_service
+    app.state.text_embedder = text_embedder
+    app.state.openai_client = openai_client
+    app.state.image_embedder = image_embedder
+    storage = init_azure_storage_service()
+    app.state.azure_storage_service = storage
+    knowledge_units_factory = init_knowledge_unit_factory(
+        text_embedder=text_embedder,
+        image_embedder=image_embedder,
+        storage=storage,
+    )
+    app.state.knowledge_units_factory = knowledge_units_factory
     yield
-
-
 
 
 app = FastAPI(title="Demo Rag With Sessions", lifespan=lifespan)

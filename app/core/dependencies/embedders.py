@@ -1,10 +1,15 @@
 from app.integrations.embeddings.local_openai import E5EmbeddingService, ImageEmbeddingService
-from functools import lru_cache
+from fastapi import Request
 
-@lru_cache
-def get_text_embedder() -> E5EmbeddingService:
+
+def init_text_embedder():
     return E5EmbeddingService()
 
-@lru_cache
-def get_image_embedder() -> ImageEmbeddingService:
+def init_image_embedder():
     return ImageEmbeddingService()
+
+def get_text_embedder(request: Request) -> E5EmbeddingService:
+    return request.app.state.text_embedder
+
+def get_image_embedder(request: Request) -> ImageEmbeddingService:
+    return request.app.state.image_embedder

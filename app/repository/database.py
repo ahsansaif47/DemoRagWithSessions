@@ -11,7 +11,7 @@ def get_database_connection() -> Generator[Connection, None, None]:
     with pool.connection() as conn:
         yield conn
 
-
+# TODO: Remove the config and database connection from this file
 config = config.AppConfig()
 local_db_config = config.local_db
 

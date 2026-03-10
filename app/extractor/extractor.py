@@ -10,6 +10,7 @@ import numpy as np
 import fitz
 from app.integrations.storage import local_storage
 import cv2
+from app.integrations.storage.azure_blob_storage import AzureStorageService
 
 # TODO: Wrap this in a function and return the path
 # FIXME: Ensure nothing is a global variable
@@ -18,6 +19,8 @@ m_path = base_path / "scripts" / "models"
 weights = os.path.join(str(m_path), "yolov8s-doclaynet.pt")
 
 images_path = base_path / "resources" / "images"
+
+
 # images_path = str(images_path)
 
 
@@ -42,7 +45,7 @@ class PDFContentExtractor:
         del pix
         return img
 
-    def extract(self, user_img_dir: str) -> ExtractedContent:
+    def extract(self, user_img_dir: str, azure_storage: AzureStorageService) -> ExtractedContent:
         global images_path
         content = ExtractedContent()
         doc = fitz.open(self.pdf_path)
@@ -80,6 +83,17 @@ class PDFContentExtractor:
                 _, buffer = cv2.imencode(".jpg", crop['image'])
                 image_name = f'page_{page_num}_vis_{i}.jpg'
 
+                user_file_path = '/'.join(user_img_dir.split('/')[-2:])
+                img_blob_name = user_file_path + '/' + image_name
+
+                azure_storage.upload_bytes(buffer.tobytes(), img_blob_name, "image")
+
+                # img_dir_split = user_img_dir.split("/")[:]
+
+                # blob_name = f'{user_img_dir}/{image_name}'
+                # azure_storage.upload_bytes(buffer.tobytes(), )
+
+                # TODO: Stop uploading on local system.
                 # Save the image file in this function.
                 img_path = os.path.join(user_img_dir, image_name)
                 local_storage.save_image(img_path, buffer.tobytes())

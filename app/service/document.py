@@ -1,18 +1,18 @@
-from app.dto.document import UploadPDFRequestDTO, DocData
-from app.extractor.extractor import PDFContentExtractor
-from app.knowledge_unit_factory import knowledge_units
-from app.models.document import DocumentTextModel, DocumentImageModel
-from app.repository.document import DocumentRepository
-from app.core.dependencies.config import config
 import logging
+import os
 import uuid
 from pathlib import Path
 from typing import List
-import os
-from app.integrations.llm.local_openai import OpenAIClient
+
+from app.dto.document import UploadPDFRequestDTO, DocData
+from app.extractor.extractor import PDFContentExtractor
 from app.integrations.embeddings.local_openai import E5EmbeddingService, ImageEmbeddingService
-from app.core.dependencies.azure_storage import get_azure_storage_service
+from app.integrations.llm.local_openai import OpenAIClient
 from app.integrations.storage.azure_blob_storage import AzureStorageService
+from app.knowledge_unit_factory import knowledge_units
+from app.knowledge_unit_factory.knowledge_units import KnowledgeUnitsFactory
+from app.models.document import DocumentTextModel, DocumentImageModel
+from app.repository.document import DocumentRepository
 
 logger = logging.getLogger(__name__)
 
@@ -20,20 +20,23 @@ visuals_model_path = "../../scripts/models/yolov8s-doclaynet.pt"
 
 
 class DocumentService:
+    # TODO: Remove the text and image embedders from the service layer
+    # Text and image embedders already present in knowledge unit factory
     def __init__(
             self,
             document_repository: DocumentRepository,
             text_embedder: E5EmbeddingService,
             image_embedder: ImageEmbeddingService,
             openai_client: OpenAIClient,
-            azure_blob_storage: AzureStorageService
-
+            azure_blob_storage: AzureStorageService,
+            ku_factory: KnowledgeUnitsFactory
     ):
         self.document_repository = document_repository
         self.text_embedder = text_embedder
         self.image_embedder = image_embedder
         self.openai_client = openai_client
         self.azure_blob_storage = azure_blob_storage
+        self.ku_factory = ku_factory
 
     # FIXME: Use the config variable to interact with the local and azure storage and database
     def add_document(self, user_id: str, pdf_dir: str, document: UploadPDFRequestDTO):
@@ -48,17 +51,20 @@ class DocumentService:
             os.makedirs(user_images_dir, exist_ok=True)
 
             # Upload file to azure
-            blob_name = f'{user_id}/{file_id}.pdf'
-            self.azure_blob_storage.upload_file(file_path=pdf_dir, blob_name=blob_name, file_type="pdf")
+            pdf_blob_name = f'{user_id}/{file_id}.pdf'
+            self.azure_blob_storage.upload_file(file_path=pdf_dir, blob_name=pdf_blob_name, file_type="pdf")
 
 
             file_size_bytes = os.path.getsize(pdf_dir)
 
             pdf_extractor = PDFContentExtractor(pdf_path=pdf_dir)
-            extracted_content = pdf_extractor.extract(user_img_dir=str(user_images_dir))
+            extracted_content = pdf_extractor.extract(user_img_dir=str(user_images_dir), azure_storage=self.azure_blob_storage)
+
+
 
             text_knowledge_units = knowledge_units.build_text_knowledge_units(extracted_content, uuid.UUID(file_id), self.text_embedder)
-            image_knowledge_units = knowledge_units.build_image_knowledge_units(str(user_images_dir), uuid.UUID(file_id), self.image_embedder)
+            # image_knowledge_units = knowledge_units.build_image_knowledge_units(str(user_images_dir), uuid.UUID(file_id), self.image_embedder)
+            image_knowledge_units_azure = knowledge_units.build_image_knowledge_units_azure(str(user_images_dir), uuid.UUID(file_id), self.azure_blob_storage, self.image_embedder)
 
             doc_data = DocData()
             doc_data.file_name = document.file_name
@@ -77,7 +83,7 @@ class DocumentService:
                 )
                 document_text_model.append(doc_txt_model)
 
-            for _, data in enumerate(image_knowledge_units):
+            for _, data in enumerate(image_knowledge_units_azure):
                 doc_img_model = DocumentImageModel(
                     file_id=data.file_id,
                     page_number=data.page_number,

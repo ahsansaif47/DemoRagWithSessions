@@ -39,3 +39,7 @@ class AzureStorageService:
 
         with open(file_path, "rb") as data:
             container_client.upload_blob(blob_name, data, overwrite=True)
+
+    def upload_bytes(self, data: bytes, blob_name: str, file_type: str):
+        container_client = self.get_container_client(file_type)
+        container_client.upload_blob(blob_name, data, overwrite=True)
