@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
+import asyncio
 
 from app.core.dependencies.knowledge_units_factory import get_knowledge_units_factory
 from app.core.dependencies.llm_client import init_openai_client
@@ -15,6 +16,8 @@ import uvicorn
 from app.core.dependencies.azure_storage import init_azure_storage_service
 from app.core.dependencies.knowledge_units_factory import init_knowledge_unit_factory
 from app.core.dependencies.embedders import init_text_embedder, init_image_embedder
+from app.core.dependencies.temporal_client import init_temporal_client
+from app.temporal.worker import start_worker
 
 # FIXME: Get the extractor out of the core package
 # TODO: Create an extractor package and place it there
@@ -59,18 +62,60 @@ openai_client = init_openai_client()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize embedders and AI services
     app.state.text_embedder = text_embedder
     app.state.openai_client = openai_client
     app.state.image_embedder = image_embedder
+    
+    # Initialize storage services
     storage = init_azure_storage_service()
     app.state.azure_storage_service = storage
+    
+    # Initialize knowledge units factory
     knowledge_units_factory = init_knowledge_unit_factory(
         text_embedder=text_embedder,
         image_embedder=image_embedder,
         storage=storage,
     )
     app.state.knowledge_units_factory = knowledge_units_factory
+
+
+
+    # Temporal Client
+    temporal_client = await init_temporal_client()
+    app.state.temporal_client = temporal_client
+
+
+    worker_task = asyncio.create_task(
+        start_worker(
+            temporal_client,
+            storage,
+            knowledge_units_factory
+        )
+    )
+
+    # # Initialize Temporal client
+    # try:
+    #     temporal_client = await init_temporal_client()
+    #     app.state.temporal_client = temporal_client
+    #     print("Temporal client initialized successfully")
+    # except Exception as e:
+    #     print(f"Failed to initialize Temporal client: {str(e)}")
+    #     print("Application will start but document ingestion will not work")
+    #     app.state.temporal_client = None
+    
     yield
+    
+    # Cleanup if needed
+    print("Application shutting down")
+    worker_task.cancel()
+
+
+    await temporal_client.close()
+    # try:
+    #     await worker_task
+    # except asyncio.CancelledError:
+    #     print('Temporal worker stopped')
 
 
 app = FastAPI(title="Demo Rag With Sessions", lifespan=lifespan)

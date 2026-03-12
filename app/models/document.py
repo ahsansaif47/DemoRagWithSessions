@@ -1,4 +1,6 @@
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import List
 
 
 class DocumentModel:
@@ -11,17 +13,32 @@ class DocumentModel:
         self.updated_at = datetime.now(timezone.utc)
 
 
+# class DocumentTextModel:
+#     def __init__(self, file_id, page_number, content, embedding):
+#         self.file_id = file_id
+#         self.page_number = page_number
+#         self.content = content
+#         self.embedding = embedding
+
+@dataclass
 class DocumentTextModel:
-    def __init__(self, file_id, page_number, content, embedding):
-        self.file_id = file_id
-        self.page_number = page_number
-        self.content = content
-        self.embedding = embedding
+    file_id: str
+    page_number: int
+    content: str
+    embedding: List[float]
 
 
+# class DocumentImageModel:
+#     def __init__(self, file_id, page_number, image_path, embedding):
+#         self.file_id = file_id
+#         self.page_number = page_number
+#         self.image_path = image_path
+#         self.embedding = embedding
+
+
+@dataclass
 class DocumentImageModel:
-    def __init__(self, file_id, page_number, image_path, embedding):
-        self.file_id = file_id
-        self.page_number = page_number
-        self.image_path = image_path
-        self.embedding = embedding
+    file_id: str
+    page_number: int
+    image_path: str
+    embedding: List[float]

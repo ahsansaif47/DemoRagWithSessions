@@ -5,13 +5,15 @@ from app.dto.document import DocData
 from typing import List, Tuple
 from app.utils.utils import chunked, generate_batches
 from app.models.document import DocumentModel, DocumentTextModel, DocumentImageModel
+from psycopg_pool import ConnectionPool
+
 
 logger = logging.getLogger(__name__)
 
 
 class DocumentRepository:
-    def __init__(self, conn):
-        self.conn = conn
+    def __init__(self, pool: ConnectionPool):
+        self.pool = pool
         self.document_columns = ["id", "user_id", "file_name", "file_size", "created_at", "deleted_at"]
         self.document_texts = ["id", "file_id", "page_number", "content", "embedding", "created_at", "deleted_at"]
         self.document_images = ["id", "file_id", "page_number", "image_path", "embedding", "created_at", "deleted_at"]
@@ -22,44 +24,46 @@ class DocumentRepository:
 
     def add_document(self, doc: DocData) -> uuid.UUID | None:
         try:
-            with self.conn.cursor() as cursor:
-                placeholders = ",".join(["%s"] * len(self.document_columns))
-                query = f'INSERT INTO files({self.document_columns_str}) VALUES({placeholders})'
+            with self.pool.connection() as conn:
+                with conn.cursor() as cursor:
+                    placeholders = ",".join(["%s"] * len(self.document_columns))
+                    query = f'INSERT INTO files({self.document_columns_str}) VALUES({placeholders})'
 
-                doc_model = DocumentModel(
-                    file_id=doc.file_id,
-                    user_id=doc.user_id,
-                    file_name=doc.file_name,
-                    file_size=doc.file_size
-                )
+                    doc_model = DocumentModel(
+                        file_id=doc.file_id,
+                        user_id=doc.user_id,
+                        file_name=doc.file_name,
+                        file_size=doc.file_size
+                    )
 
-                values = (
-                    uuid.UUID(doc_model.file_id),
-                    doc_model.user_id,
-                    doc_model.file_name,
-                    doc_model.file_size,
-                    doc_model.created_at,
-                    None
-                )
+                    values = (
+                        uuid.UUID(doc_model.file_id),
+                        doc_model.user_id,
+                        doc_model.file_name,
+                        doc_model.file_size,
+                        doc_model.created_at,
+                        None
+                    )
 
-                cursor.execute(query, values)
-                self.conn.commit()
+                    cursor.execute(query, values)
+                    conn.commit()
 
-                logger.info(f"Repo: Document {doc_model.file_name} added to {doc_model.user_id}")
-                return uuid.UUID(doc.file_id)
+                    logger.info(f"Repo: Document {doc_model.file_name} added to {doc_model.user_id}")
+                    return uuid.UUID(doc.file_id)
         except Exception as e:
             logger.error(f'Repo: Document Upload Error: {str(e)}')
-            self.conn.rollback()
+            # self.conn.rollback()
             raise e
 
     def batch_insert(self, query: str, data: list, batch_size=100):
         try:
-            with self.conn.cursor() as cursor:
-                for batch in generate_batches(data, batch_size):
-                    cursor.executemany(
-                        query, batch
-                    )
-                self.conn.commit()
+            with self.pool.connection() as conn:
+                with conn.cursor() as cursor:
+                    for batch in generate_batches(data, batch_size):
+                        cursor.executemany(
+                            query, batch
+                        )
+                    conn.commit()
 
         except Exception as e:
             logger.error(f'Batch Insert Error: {str(e)}')
@@ -85,7 +89,7 @@ class DocumentRepository:
             self.batch_insert(text_embeddings_query, data)
         except Exception as e:
             logger.error(f'Repo: Document Text Upload Error: {str(e)}')
-            self.conn.rollback()
+            # self.conn.rollback()
             raise e
 
     def add_document_images(self, doc_images: List[DocumentImageModel]):
@@ -109,7 +113,7 @@ class DocumentRepository:
             self.batch_insert(image_embeddings_query, data)
         except Exception as e:
             logger.error(f'Repo: Document Images Upload Error: {str(e)}')
-            self.conn.rollback()
+            # self.conn.rollback()
             raise e
 
 
@@ -125,23 +129,24 @@ class DocumentRepository:
                 query_embedding = query_embedding.tolist()
 
             vector_str = f"[{','.join(map(str, query_embedding))}]"
-            with self.conn.cursor() as cursor:
-                query = """
-                    SELECT dt.file_id, dt.page_number, dt.content
-                    FROM document_texts dt
-                    JOIN files f ON dt.file_id = f.id
-                    WHERE f.user_id = %s
-                    ORDER BY dt.embedding <-> %s
-                    LIMIT %s;
-                """
+            with self.pool.connection() as conn:
+                with conn.cursor() as cursor:
+                    query = """
+                        SELECT dt.file_id, dt.page_number, dt.content
+                        FROM document_texts dt
+                        JOIN files f ON dt.file_id = f.id
+                        WHERE f.user_id = %s
+                        ORDER BY dt.embedding <-> %s
+                        LIMIT %s;
+                    """
 
-                cursor.execute(query, (user_id, vector_str, top_k))
-                results = cursor.fetchall()
+                    cursor.execute(query, (user_id, vector_str, top_k))
+                    results = cursor.fetchall()
 
-                return results  # [(file_id, page_number, content)]
+                    return results  # [(file_id, page_number, content)]
 
         except Exception as e:
-            self.conn.rollback()
+            # self.conn.rollback()
             raise e
 
     # -----------------------------
@@ -156,57 +161,59 @@ class DocumentRepository:
             return []
 
         try:
-            with self.conn.cursor() as cursor:
+            with self.pool.connection() as conn:
+                with conn.cursor() as cursor:
 
-                conditions = []
-                values = []
+                    conditions = []
+                    values = []
 
-                for file_id, page_number in file_page_pairs:
-                    conditions.append("(file_id = %s AND page_number = %s)")
-                    values.extend([file_id, page_number])
+                    for file_id, page_number in file_page_pairs:
+                        conditions.append("(file_id = %s AND page_number = %s)")
+                        values.extend([file_id, page_number])
 
-                where_clause = " OR ".join(conditions)
+                    where_clause = " OR ".join(conditions)
 
-                query = f"""
-                    SELECT file_id, page_number, image_path
-                    FROM document_images
-                    WHERE {where_clause};
-                """
+                    query = f"""
+                        SELECT file_id, page_number, image_path
+                        FROM document_images
+                        WHERE {where_clause};
+                    """
 
-                cursor.execute(query, values)
-                results = cursor.fetchall()
+                    cursor.execute(query, values)
+                    results = cursor.fetchall()
 
-                return results  # [(file_id, page_number, image_path)]
+                    return results  # [(file_id, page_number, image_path)]
 
         except Exception as e:
-            self.conn.rollback()
+            # self.conn.rollback()
             raise e
 
 
     def remove_document(self, doc_id: str) -> bool:
         try:
-            with self.conn.cursor() as cursor:
-                # Mark Document Text Soft Deleted
-                soft_delete_file_text_q = "UPDATE document_texts SET deleted_at = '%s' WHERE file_id = '%s'"
-                values = (datetime.now(timezone.utc), doc_id)
-                cursor.execute(soft_delete_file_text_q, values)
+            with self.pool.connection() as conn:
+                with conn.cursor() as cursor:
+                    # Mark Document Text Soft Deleted
+                    soft_delete_file_text_q = "UPDATE document_texts SET deleted_at = '%s' WHERE file_id = '%s'"
+                    values = (datetime.now(timezone.utc), doc_id)
+                    cursor.execute(soft_delete_file_text_q, values)
 
-                # Mark Document Images Soft Deleted
-                soft_delete_file_images_q = "UPDATE document_images SET deleted_at = '%s' WHERE file_id = '%s'"
-                cursor.execute(soft_delete_file_images_q, values)
+                    # Mark Document Images Soft Deleted
+                    soft_delete_file_images_q = "UPDATE document_images SET deleted_at = '%s' WHERE file_id = '%s'"
+                    cursor.execute(soft_delete_file_images_q, values)
 
-                # Soft Delete File Record Itself
-                query = "UPDATE files SET deleted_at = '%s' WHERE file_id = '%s'"
-                cursor.execute(query, values)
+                    # Soft Delete File Record Itself
+                    query = "UPDATE files SET deleted_at = '%s' WHERE file_id = '%s'"
+                    cursor.execute(query, values)
 
-                self.conn.commit()
+                    conn.commit()
 
-                logger.info(f"Repo: Document {doc_id} Images Removed")
-                logger.info(f"Repo: Document {doc_id} Text Removed")
-                logger.info(f"Repo: Document {doc_id} Removed")
+                    logger.info(f"Repo: Document {doc_id} Images Removed")
+                    logger.info(f"Repo: Document {doc_id} Text Removed")
+                    logger.info(f"Repo: Document {doc_id} Removed")
 
-                return True
+                    return True
         except Exception as e:
             logger.error(f'Repo: Document Removal Error: {str(e)}')
-            self.conn.rollback()
+            # self.conn.rollback()
             raise e

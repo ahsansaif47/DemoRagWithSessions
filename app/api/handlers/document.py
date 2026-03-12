@@ -57,12 +57,13 @@ class DocumentHandlers:
         dto.file_name = file.filename
         dto.file_path = file_path
 
-        # Call service
-        self.document_service.add_document(user_id=user_id, pdf_dir=file_path, document=dto)
+        # Call service - now async with Temporal workflow
+        result = await self.document_service.add_document(user_id=user_id, pdf_dir=file_path, document=dto)
+        
         res = UploadPDFResponseDTO(
-            message="Document uploaded successfully",
-            status="201",
-            file_id=file_id
+            message="Document upload started. Processing in background.",
+            status="202",
+            file_id=result.get("file_id", file_id)
         )
 
         return res

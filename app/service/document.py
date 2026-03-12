@@ -1,27 +1,19 @@
 import logging
-import os
 import uuid
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from app.dto.document import UploadPDFRequestDTO, DocData
-from app.extractor.extractor import PDFContentExtractor
 from app.integrations.embeddings.local_openai import E5EmbeddingService, ImageEmbeddingService
 from app.integrations.llm.local_openai import OpenAIClient
 from app.integrations.storage.azure_blob_storage import AzureStorageService
-from app.knowledge_unit_factory import knowledge_units
 from app.knowledge_unit_factory.knowledge_units import KnowledgeUnitsFactory
-from app.models.document import DocumentTextModel, DocumentImageModel
 from app.repository.document import DocumentRepository
 
 logger = logging.getLogger(__name__)
 
-visuals_model_path = "../../scripts/models/yolov8s-doclaynet.pt"
-
 
 class DocumentService:
-    # TODO: Remove the text and image embedders from the service layer
-    # Text and image embedders already present in knowledge unit factory
     def __init__(
             self,
             document_repository: DocumentRepository,
@@ -29,7 +21,8 @@ class DocumentService:
             image_embedder: ImageEmbeddingService,
             openai_client: OpenAIClient,
             azure_blob_storage: AzureStorageService,
-            ku_factory: KnowledgeUnitsFactory
+            ku_factory: KnowledgeUnitsFactory,
+            temporal_client: Optional = None
     ):
         self.document_repository = document_repository
         self.text_embedder = text_embedder
@@ -37,65 +30,51 @@ class DocumentService:
         self.openai_client = openai_client
         self.azure_blob_storage = azure_blob_storage
         self.ku_factory = ku_factory
+        self.temporal_client = temporal_client
 
-    # FIXME: Use the config variable to interact with the local and azure storage and database
-    def add_document(self, user_id: str, pdf_dir: str, document: UploadPDFRequestDTO):
+    async def add_document(self, user_id: str, pdf_dir: str, document: UploadPDFRequestDTO):
+        """
+        Start a Temporal workflow to process document ingestion asynchronously.
+        
+        Returns the workflow ID for tracking the ingestion process.
+        """
         try:
-            user_id = user_id
+            # Extract file_id from path
             file_id = pdf_dir.split('/')[-1].split('.pdf')[0]
+            
+            if not self.temporal_client:
+                raise ValueError("Temporal client not initialized. Cannot start workflow.")
+            
+            # Start the Temporal workflow
+            from app.temporal.workflows.document_workflows import DocumentIngestionWorkflow
+            
+            # result = await self.temporal_client.start_workflow(
+            #     DocumentIngestionWorkflow.run,
+            #     pdf_dir,
+            #     user_id,
+            #     file_id,
+            #     document.file_name,
+            #     id=f"document-ingestion-{file_id}",
+            #     task_queue="document-task-queue"
+            # )
 
-
-            base_dir = Path(__file__).resolve().parents[2]
-            images_dir = base_dir / "resources" / "images"
-            user_images_dir = images_dir / user_id / file_id
-            os.makedirs(user_images_dir, exist_ok=True)
-
-            # Upload file to azure
-            pdf_blob_name = f'{user_id}/{file_id}.pdf'
-            self.azure_blob_storage.upload_file(file_path=pdf_dir, blob_name=pdf_blob_name, file_type="pdf")
-
-
-            file_size_bytes = os.path.getsize(pdf_dir)
-
-            pdf_extractor = PDFContentExtractor(pdf_path=pdf_dir)
-            extracted_content = pdf_extractor.extract(user_img_dir=str(user_images_dir), azure_storage=self.azure_blob_storage)
-
-
-
-            text_knowledge_units = knowledge_units.build_text_knowledge_units(extracted_content, uuid.UUID(file_id), self.text_embedder)
-            # image_knowledge_units = knowledge_units.build_image_knowledge_units(str(user_images_dir), uuid.UUID(file_id), self.image_embedder)
-            image_knowledge_units_azure = knowledge_units.build_image_knowledge_units_azure(str(user_images_dir), uuid.UUID(file_id), self.azure_blob_storage, self.image_embedder)
-
-            doc_data = DocData()
-            doc_data.file_name = document.file_name
-            doc_data.file_size = file_size_bytes
-            doc_data.user_id = user_id
-            doc_data.file_id = str(file_id)
-
-            document_text_model: List[DocumentTextModel] = []
-            document_image_model: List[DocumentImageModel] = []
-            for i, data in enumerate(text_knowledge_units):
-                doc_txt_model = DocumentTextModel(
-                    file_id=data.file_id,
-                    page_number=data.page_number,
-                    content=data.text,
-                    embedding=data.embedding
-                )
-                document_text_model.append(doc_txt_model)
-
-            for _, data in enumerate(image_knowledge_units_azure):
-                doc_img_model = DocumentImageModel(
-                    file_id=data.file_id,
-                    page_number=data.page_number,
-                    image_path=data.image_path,
-                    embedding=data.embedding
-                )
-                document_image_model.append(doc_img_model)
-
-            self.document_repository.add_document(doc_data)
-            self.document_repository.add_document_text(document_text_model)
-            self.document_repository.add_document_images(document_image_model)
+            result = await self.temporal_client.start_workflow(
+                DocumentIngestionWorkflow.run,  # Best practice to reference the run method
+                args=[pdf_dir, user_id, file_id, document.file_name],
+                id=f"document-ingestion-{file_id}",
+                task_queue="document-task-queue"
+            )
+            
+            logger.info(f"Started document ingestion workflow: {result.id}")
+            
+            return {
+                "workflow_id": result.id,
+                "file_id": file_id,
+                "status": "processing"
+            }
+            
         except Exception as e:
+            logger.error(f"Error starting document ingestion workflow: {str(e)}")
             raise e
 
     def retrieve_and_answer(
@@ -104,6 +83,9 @@ class DocumentService:
             question: str,
             top_k: int = 5
     ) -> dict:
+        """
+        Synchronous query processing - kept in service layer for fast response.
+        """
 
         # 1️⃣ Embed query
         query_embedding = self.text_embedder.embed_query(question, "query")
@@ -156,7 +138,11 @@ class DocumentService:
         }
 
     def remove_document(self, document_id: str):
+        """
+        Synchronous document removal - kept in service layer for fast execution.
+        """
         try:
             return self.document_repository.remove_document(document_id)
         except Exception as e:
+            logger.error(f"Error removing document: {str(e)}")
             raise e
